@@ -114,6 +114,9 @@ class MagicModel:
             elif block_type in ["equation"]:
                 block_type = BlockType.INTERLINE_EQUATION
                 span_type = ContentType.INTERLINE_EQUATION
+            elif block_type == "redaction":
+                block_type = BlockType.REDACTION
+                span_type = ContentType.REDACTION
 
             #  code 和 algorithm 类型的块，如果内容中包含行内公式，则需要将块类型切换为algorithm
             switch_code_to_algorithm = False
@@ -252,6 +255,7 @@ class MagicModel:
         self.ref_text_blocks = []
         self.phonetic_blocks = []
         self.list_blocks = []
+        self.redaction_blocks = []
         for block in blocks:
             if block["type"] in [BlockType.IMAGE_BODY, BlockType.IMAGE_CAPTION, BlockType.IMAGE_FOOTNOTE]:
                 self.image_blocks.append(block)
@@ -273,6 +277,8 @@ class MagicModel:
                 self.discarded_blocks.append(block)
             elif block["type"] == BlockType.LIST:
                 self.list_blocks.append(block)
+            elif block["type"] == BlockType.REDACTION:
+                self.redaction_blocks.append(block)
             else:
                 continue
 
@@ -344,6 +350,9 @@ class MagicModel:
 
     def get_all_spans(self):
         return self.all_spans
+
+    def get_redaction_blocks(self):
+        return self.redaction_blocks
 
 
 def isolated_formula_clean(txt):

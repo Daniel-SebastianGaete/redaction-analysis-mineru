@@ -9,11 +9,11 @@ from mineru.backend.utils import cross_page_table_merge
 from mineru.utils.config_reader import get_device, get_llm_aided_config, get_formula_enable
 from mineru.backend.pipeline.model_init import AtomModelSingleton
 from mineru.backend.pipeline.para_split import para_split
-from mineru.utils.block_pre_proc import prepare_block_bboxes, process_groups
+from mineru.utils.block_pre_proc import prepare_block_bboxes, process_groups, add_bboxes
 from mineru.utils.block_sort import sort_blocks_by_bbox
 from mineru.utils.boxbase import calculate_overlap_area_in_bbox1_area_ratio
 from mineru.utils.cut_image import cut_image_and_table
-from mineru.utils.enum_class import ContentType
+from mineru.utils.enum_class import BlockType, ContentType
 from mineru.utils.llm_aided import llm_aided_title
 from mineru.utils.model_utils import clean_memory
 from mineru.backend.pipeline.pipeline_magic_model import MagicModel
@@ -37,6 +37,7 @@ def page_model_info_to_page_info(page_model_info, image_dict, page, image_writer
     discarded_blocks = magic_model.get_discarded()
     text_blocks = magic_model.get_text_blocks()
     title_blocks = magic_model.get_title_blocks()
+    redaction_blocks = magic_model.get_redaction_blocks()
     inline_equations, interline_equations, interline_equation_blocks = magic_model.get_equations()
 
     img_groups = magic_model.get_imgs()
@@ -124,6 +125,9 @@ def page_model_info_to_page_info(page_model_info, image_dict, page, image_writer
             page_w,
             page_h,
         )
+
+    if redaction_blocks:
+        add_bboxes(redaction_blocks, BlockType.REDACTION, all_bboxes)
 
     """在删除重复span之前，应该通过image_body和table_body的block过滤一下image和table的span"""
     """顺便删除大水印并保留abandon的span"""

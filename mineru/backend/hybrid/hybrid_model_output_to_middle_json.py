@@ -106,6 +106,7 @@ def blocks_to_page_info(
 
     text_blocks = magic_model.get_text_blocks()
     interline_equation_blocks = magic_model.get_interline_equation_blocks()
+    redaction_blocks = magic_model.get_redaction_blocks()
 
     all_spans = magic_model.get_all_spans()
     # 对image/table/interline_equation的span截图
@@ -124,6 +125,7 @@ def blocks_to_page_info(
         *text_blocks,
         *interline_equation_blocks,
         *list_blocks,
+        *redaction_blocks,
     ])
     # 对page_blocks根据index的值进行排序
     page_blocks.sort(key=lambda x: x["index"])

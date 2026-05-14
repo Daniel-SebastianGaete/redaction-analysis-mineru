@@ -9,6 +9,7 @@ from ...model.mfd.yolo_v8 import YOLOv8MFDModel
 from ...model.mfr.unimernet.Unimernet import UnimernetModel
 from ...model.mfr.pp_formulanet_plus_m.predict_formula import FormulaRecognizer
 from mineru.model.ocr.pytorch_paddle import PytorchPaddleOCR
+from ...model.redaction.yolo_redaction import YOLORedactionModel
 from ...model.ori_cls.paddle_ori_cls import PaddleOrientationClsModel
 from ...model.table.cls.paddle_table_cls import PaddleTableClsModel
 # from ...model.table.rec.RapidTable import RapidTableModel
@@ -94,6 +95,13 @@ def doclayout_yolo_model_init(weight, device='cpu'):
         device = torch.device(device)
     model = DocLayoutYOLOModel(weight, device)
     return model
+
+def redaction_model_init(weight, device='cpu'):
+    if str(device).startswith('npu'):
+        device = torch.device(device)
+    model = YOLORedactionModel(weight, device)
+    return model
+
 
 def ocr_model_init(det_db_box_thresh=0.3,
                    lang=None,
@@ -187,6 +195,11 @@ def atom_model_init(model_name: str, **kwargs):
         atom_model = table_cls_model_init()
     elif model_name == AtomicModel.ImgOrientationCls:
         atom_model = img_orientation_cls_model_init()
+    elif model_name == AtomicModel.RedactionDetection:
+        atom_model = redaction_model_init(
+            kwargs.get('redaction_weights'),
+            kwargs.get('device')
+        )
     else:
         logger.error('model name not allow')
         exit(1)
@@ -267,6 +280,20 @@ class MineruPipelineModel:
                 atom_model_name=AtomicModel.ImgOrientationCls,
                 lang=self.lang,
             )
+
+        # 初始化redaction检测模型（通过环境变量启用）
+        redaction_weights = os.getenv('MINERU_REDACTION_WEIGHTS')
+        if redaction_weights and os.path.isfile(redaction_weights):
+            self.redaction_model = atom_model_manager.get_atom_model(
+                atom_model_name=AtomicModel.RedactionDetection,
+                redaction_weights=redaction_weights,
+                device=self.device,
+            )
+            self.apply_redaction = True
+            logger.info(f'Redaction detection enabled with weights: {redaction_weights}')
+        else:
+            self.redaction_model = None
+            self.apply_redaction = False
 
         logger.info('DocAnalysis init done!')
 
@@ -370,3 +397,17 @@ class MineruHybridModel:
                 mfr_weight_dir=str(os.path.join(auto_download_and_get_model_root_path(mfr_model_path), mfr_model_path)),
                 device=self.device,
             )
+
+        # 初始化redaction检测模型（通过环境变量启用）
+        redaction_weights = os.getenv('MINERU_REDACTION_WEIGHTS')
+        if redaction_weights and os.path.isfile(redaction_weights):
+            self.redaction_model = self.atom_model_manager.get_atom_model(
+                atom_model_name=AtomicModel.RedactionDetection,
+                redaction_weights=redaction_weights,
+                device=self.device,
+            )
+            self.apply_redaction = True
+            logger.info(f'Redaction detection enabled with weights: {redaction_weights}')
+        else:
+            self.redaction_model = None
+            self.apply_redaction = False

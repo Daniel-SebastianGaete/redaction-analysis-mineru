@@ -7,3 +7,4 @@ class AtomicModel:
     WiredTable = "wired_table"
     TableCls = "table_cls"
     ImgOrientationCls = "img_ori_cls"
+    RedactionDetection = "redaction_detection"

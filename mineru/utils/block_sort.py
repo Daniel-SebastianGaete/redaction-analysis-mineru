@@ -79,7 +79,7 @@ def sort_lines_by_model(fix_blocks, page_w, page_h, line_height, footnote_blocks
                 for line in block['lines']:
                     bbox = line['bbox']
                     page_line_list.append(bbox)
-        elif block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.INTERLINE_EQUATION]:
+        elif block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.INTERLINE_EQUATION, BlockType.REDACTION]:
             block['real_lines'] = copy.deepcopy(block['lines'])
             add_lines_to_block(block)
 
@@ -275,7 +275,7 @@ def cal_block_index(fix_blocks, sorted_bboxes):
                 block['index'] = median_value
 
             # 删除图表body block中的虚拟line信息, 并用real_lines信息回填
-            if block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.TITLE, BlockType.INTERLINE_EQUATION]:
+            if block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.TITLE, BlockType.INTERLINE_EQUATION, BlockType.REDACTION]:
                 if 'real_lines' in block:
                     block['virtual_lines'] = copy.deepcopy(block['lines'])
                     block['lines'] = copy.deepcopy(block['real_lines'])
@@ -289,7 +289,7 @@ def cal_block_index(fix_blocks, sorted_bboxes):
             block_bboxes.append(block['bbox'])
 
             # 删除图表body block中的虚拟line信息, 并用real_lines信息回填
-            if block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.TITLE, BlockType.INTERLINE_EQUATION]:
+            if block['type'] in [BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.TITLE, BlockType.INTERLINE_EQUATION, BlockType.REDACTION]:
                 if 'real_lines' in block:
                     block['virtual_lines'] = copy.deepcopy(block['lines'])
                     block['lines'] = copy.deepcopy(block['real_lines'])

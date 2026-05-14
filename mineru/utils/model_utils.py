@@ -354,7 +354,9 @@ def get_res_list_from_layout_res(layout_res, iou_threshold=0.7, overlap_threshol
     for i, res in enumerate(layout_res):
         category_id = int(res['category_id'])
 
-        if category_id in [13, 14]:  # Formula regions
+        if category_id == 102:  # Redaction regions - skip routing
+            continue
+        elif category_id in [13, 14]:  # Formula regions
             single_page_mfdetrec_res.append({
                 "bbox": [int(res['poly'][0]), int(res['poly'][1]),
                          int(res['poly'][4]), int(res['poly'][5])],

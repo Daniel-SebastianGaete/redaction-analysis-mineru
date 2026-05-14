@@ -1,4 +1,4 @@
-from mineru.utils.boxbase import bbox_relative_pos, calculate_iou, bbox_distance, get_minbox_if_overlap_by_ratio
+from mineru.utils.boxbase import bbox_relative_pos, calculate_iou, bbox_distance, get_minbox_if_overlap_by_ratio, calculate_overlap_area_in_bbox1_area_ratio
 from mineru.utils.enum_class import CategoryId, ContentType
 from mineru.utils.magic_model_utils import tie_up_category_by_distance_v3, reduct_overlap
 
@@ -18,6 +18,8 @@ class MagicModel:
         self.__fix_footnote()
         """处理重叠的image_body和table_body"""
         self.__fix_by_remove_overlap_image_table_body()
+        """处理redaction与文本/标题的重叠"""
+        self.__fix_redaction_overlaps()
 
     def __fix_by_remove_overlap_image_table_body(self):
         need_remove_list = []
@@ -71,6 +73,24 @@ class MagicModel:
                 layout_dets.remove(need_remove)
 
 
+    def __fix_redaction_overlaps(self):
+        need_remove_list = []
+        layout_dets = self.__page_model_info['layout_dets']
+        redaction_blocks = [x for x in layout_dets if x['category_id'] == CategoryId.Redaction]
+        text_title_blocks = [x for x in layout_dets if x['category_id'] in [CategoryId.Text, CategoryId.Title]]
+
+        for text_block in text_title_blocks:
+            for redaction_block in redaction_blocks:
+                ratio = calculate_overlap_area_in_bbox1_area_ratio(
+                    text_block['bbox'], redaction_block['bbox']
+                )
+                if ratio > 0.7 and text_block not in need_remove_list:
+                    need_remove_list.append(text_block)
+
+        for need_remove in need_remove_list:
+            if need_remove in layout_dets:
+                layout_dets.remove(need_remove)
+
     def __fix_axis(self):
         need_remove_list = []
         layout_dets = self.__page_model_info['layout_dets']
@@ -113,6 +133,7 @@ class MagicModel:
                     CategoryId.TableFootnote,
                     CategoryId.InterlineEquation_Layout,
                     CategoryId.InterlineEquationNumber_Layout,
+                    CategoryId.Redaction,
                 ], self.__page_model_info['layout_dets']
             )
         )
@@ -305,6 +326,10 @@ class MagicModel:
         blocks = self.__get_blocks_by_type(CategoryId.Title)
         return blocks
 
+    def get_redaction_blocks(self) -> list:
+        blocks = self.__get_blocks_by_type(CategoryId.Redaction)
+        return blocks
+
     def get_all_spans(self) -> list:
 
         def remove_duplicate_spans(spans):
@@ -322,6 +347,7 @@ class MagicModel:
             CategoryId.InlineEquation,
             CategoryId.InterlineEquation_YOLO,
             CategoryId.OcrText,
+            CategoryId.Redaction,
         ]
         """当成span拼接的"""
         for layout_det in layout_dets:
@@ -348,6 +374,9 @@ class MagicModel:
                 elif category_id == CategoryId.OcrText:
                     span['content'] = layout_det['text']
                     span['type'] = ContentType.TEXT
+                elif category_id == CategoryId.Redaction:
+                    span['content'] = '[REDACTED]'
+                    span['type'] = ContentType.REDACTION
                 all_spans.append(span)
         return remove_duplicate_spans(all_spans)
 

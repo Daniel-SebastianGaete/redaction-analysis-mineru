@@ -15,6 +15,7 @@ class BlockType:
     LIST = 'list'
     INDEX = 'index'
     DISCARDED = 'discarded'
+    REDACTION = 'redaction'
 
     # Added in vlm 2.5
     CODE = "code"
@@ -38,6 +39,7 @@ class ContentType:
     INLINE_EQUATION = 'inline_equation'
     EQUATION = 'equation'
     CODE = 'code'
+    REDACTION = 'redaction'
 
 
 class ContentTypeV2:
@@ -81,6 +83,7 @@ class CategoryId:
     OcrText = 15
     LowScoreText = 16
     ImageFootnote = 101
+    Redaction = 102
 
 
 class MakeMode:

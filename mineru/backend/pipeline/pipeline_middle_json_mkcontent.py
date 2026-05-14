@@ -59,6 +59,8 @@ def make_blocks_to_markdown(paras_of_layout,
                     for block in para_block['blocks']:  # 2nd.拼image_caption
                         if block['type'] == BlockType.IMAGE_CAPTION:
                             para_text += '  \n' + merge_para_with_text(block)
+        elif para_type == BlockType.REDACTION:
+            para_text = '[REDACTED]'
         elif para_type == BlockType.TABLE:
             if mode == MakeMode.NLP_MD:
                 continue
@@ -130,6 +132,8 @@ def merge_para_with_text(para_block):
             elif span_type == ContentType.INTERLINE_EQUATION:
                 if span.get('content', ''):
                     content = f"\n{display_left_delimiter}\n{span['content']}\n{display_right_delimiter}\n"
+            elif span_type == ContentType.REDACTION:
+                content = '[REDACTED]'
 
             content = content.strip()
 
@@ -214,6 +218,11 @@ def make_blocks_to_content_list(para_block, img_buket_path, page_idx, page_size)
         if para_block['lines'][0]['spans'][0].get('content', ''):
             para_content['text'] = merge_para_with_text(para_block)
             para_content['text_format'] = 'latex'
+    elif para_type == BlockType.REDACTION:
+        para_content = {
+            'type': ContentType.REDACTION,
+            'text': '[REDACTED]',
+        }
     elif para_type == BlockType.IMAGE:
         para_content = {'type': ContentType.IMAGE, 'img_path': '', BlockType.IMAGE_CAPTION: [], BlockType.IMAGE_FOOTNOTE: []}
         for block in para_block['blocks']:

@@ -381,6 +381,54 @@ def _should_enable_vlm_ocr(ocr_enable: bool, language: str, inline_formula_enabl
     )
 
 
+def _run_redaction_detection(results, images_pil_list, hybrid_pipeline_model):
+    """Run YOLO redaction detection and append normalized blocks to results.
+
+    Works in both vlm_ocr_enable modes:
+    - If hybrid_pipeline_model is provided, use its redaction_model.
+    - Otherwise, check env var and build the model directly via AtomModelSingleton.
+    """
+    from mineru.backend.pipeline.model_init import AtomModelSingleton, AtomicModel
+
+    # Determine which redaction model to use
+    redaction_model = None
+    if hybrid_pipeline_model is not None and getattr(hybrid_pipeline_model, 'apply_redaction', False):
+        redaction_model = hybrid_pipeline_model.redaction_model
+    else:
+        # vlm_ocr_enable=True case: hybrid_pipeline_model is None.
+        # Build the redaction model directly from the env var.
+        redaction_weights = os.getenv('MINERU_REDACTION_WEIGHTS')
+        if redaction_weights and os.path.isfile(redaction_weights):
+            device = get_device()
+            redaction_model = AtomModelSingleton().get_atom_model(
+                atom_model_name=AtomicModel.RedactionDetection,
+                redaction_weights=redaction_weights,
+                device=device,
+            )
+
+    if redaction_model is None:
+        return
+
+    import numpy as np
+    np_images = [np.asarray(pil_image) for pil_image in images_pil_list]
+    redaction_results = redaction_model.batch_predict(np_images)
+
+    for page_idx, page_detections in enumerate(redaction_results):
+        img_h, img_w = np_images[page_idx].shape[:2]
+        for det in page_detections:
+            poly = det['poly']
+            x0 = max(0.0, poly[0] / img_w)
+            y0 = max(0.0, poly[1] / img_h)
+            x1 = min(1.0, poly[4] / img_w)
+            y1 = min(1.0, poly[5] / img_h)
+            results[page_idx].append({
+                'bbox': [round(x0, 4), round(y0, 4), round(x1, 4), round(y1, 4)],
+                'type': 'redaction',
+                'content': '[REDACTED]',
+                'angle': 0,
+            })
+
+
 def doc_analyze(
         pdf_bytes,
         image_writer: DataWriter | None,
@@ -435,6 +483,9 @@ def doc_analyze(
         _normalize_bbox(inline_formula_list, ocr_res_list, images_pil_list)
     infer_time = round(time.time() - infer_start, 2)
     logger.debug(f"infer finished, cost: {infer_time}, speed: {round(len(results)/infer_time, 3)} page/s")
+
+    # Redaction detection (env-var gated)
+    _run_redaction_detection(results, images_pil_list, hybrid_pipeline_model)
 
     # 生成中间JSON
     middle_json = result_to_middle_json(
@@ -507,6 +558,9 @@ async def aio_doc_analyze(
         _normalize_bbox(inline_formula_list, ocr_res_list, images_pil_list)
     infer_time = round(time.time() - infer_start, 2)
     logger.debug(f"infer finished, cost: {infer_time}, speed: {round(len(results)/infer_time, 3)} page/s")
+
+    # Redaction detection (env-var gated)
+    _run_redaction_detection(results, images_pil_list, hybrid_pipeline_model)
 
     # 生成中间JSON
     middle_json = result_to_middle_json(

@@ -53,6 +53,14 @@ class BatchAnalyze:
             pil_images, YOLO_LAYOUT_BASE_BATCH_SIZE
         )
 
+        # 检测redaction区域
+        if getattr(self.model, 'apply_redaction', False):
+            images_redaction_res = self.model.redaction_model.batch_predict(
+                pil_images, YOLO_LAYOUT_BASE_BATCH_SIZE
+            )
+            for page_idx in range(len(pil_images)):
+                images_layout_res[page_idx] += images_redaction_res[page_idx]
+
         if self.formula_enable:
             # 公式检测
             images_mfd_res = self.model.mfd_model.batch_predict(

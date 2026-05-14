@@ -58,6 +58,8 @@ def span_block_type_compatible(span_type, block_type):
         return block_type in [BlockType.IMAGE_BODY]
     elif span_type == ContentType.TABLE:
         return block_type in [BlockType.TABLE_BODY]
+    elif span_type == ContentType.REDACTION:
+        return block_type in [BlockType.REDACTION]
     else:
         return False
 
@@ -228,7 +230,7 @@ def fix_block_spans(block_with_spans):
                           BlockType.TABLE_CAPTION, BlockType.TABLE_FOOTNOTE
                           ]:
             block = fix_text_block(block)
-        elif block_type in [BlockType.INTERLINE_EQUATION, BlockType.IMAGE_BODY, BlockType.TABLE_BODY]:
+        elif block_type in [BlockType.INTERLINE_EQUATION, BlockType.IMAGE_BODY, BlockType.TABLE_BODY, BlockType.REDACTION]:
             block = fix_interline_block(block)
         else:
             continue
