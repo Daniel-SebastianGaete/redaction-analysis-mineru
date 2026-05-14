@@ -41,7 +41,7 @@ def merge_para_with_text(para_block, formula_enable=True, img_buket_path=''):
             elif span_type == ContentType.INLINE_EQUATION:
                 content = f"{inline_left_delimiter}{span['content']}{inline_right_delimiter}"
             elif span_type == ContentType.REDACTION:
-                content = '[REDACTED]'
+                content = '*****'
             elif span_type == ContentType.INTERLINE_EQUATION:
                 if formula_enable:
                     content = f"\n{display_left_delimiter}\n{span['content']}\n{display_right_delimiter}\n"
@@ -141,7 +141,7 @@ def mk_blocks_to_markdown(para_blocks, make_mode, formula_enable, table_enable, 
                             para_text += '  \n' + merge_para_with_text(block)
 
         elif para_type == BlockType.REDACTION:
-            para_text = '[REDACTED]'
+            para_text = '*****'
         elif para_type == BlockType.TABLE:
             if make_mode == MakeMode.NLP_MD:
                 continue
@@ -263,7 +263,7 @@ def make_blocks_to_content_list(para_block, img_buket_path, page_idx, page_size)
     elif para_type == BlockType.REDACTION:
         para_content = {
             'type': ContentType.REDACTION,
-            'text': '[REDACTED]',
+            'text': '*****',
         }
     elif para_type == BlockType.CODE:
         para_content = {'type': BlockType.CODE, 'sub_type': para_block["sub_type"], BlockType.CODE_CAPTION: []}
@@ -444,7 +444,7 @@ def make_blocks_to_content_list_v2(para_block, img_buket_path, page_size):
         para_content = {
             'type': ContentType.REDACTION,
             'content': {
-                'text': '[REDACTED]',
+                'text': '*****',
             }
         }
     elif para_type == BlockType.REF_TEXT:

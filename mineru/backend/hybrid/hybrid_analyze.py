@@ -424,7 +424,7 @@ def _run_redaction_detection(results, images_pil_list, hybrid_pipeline_model):
             results[page_idx].append({
                 'bbox': [round(x0, 4), round(y0, 4), round(x1, 4), round(y1, 4)],
                 'type': 'redaction',
-                'content': '[REDACTED]',
+                'content': '*****',
                 'angle': 0,
             })
 

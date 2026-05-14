@@ -375,7 +375,7 @@ class MagicModel:
                     span['content'] = layout_det['text']
                     span['type'] = ContentType.TEXT
                 elif category_id == CategoryId.Redaction:
-                    span['content'] = '[REDACTED]'
+                    span['content'] = '*****'
                     span['type'] = ContentType.REDACTION
                 all_spans.append(span)
         return remove_duplicate_spans(all_spans)
