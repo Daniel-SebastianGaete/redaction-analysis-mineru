@@ -74,6 +74,20 @@ class MagicModel:
 
 
     def __fix_redaction_overlaps(self):
+        # Drop a text/title block when a redaction covers > this fraction of
+        # the block's area; otherwise the block survives (its OCR'd text
+        # outside the covered region is presumed reliable). Overridable via
+        # MINERU_REDACTION_OVERLAP_THRESHOLD. Note: this only affects whether
+        # text blocks are kept — redactions themselves are still emitted as
+        # their own BlockType.REDACTION blocks downstream (see
+        # model_json_to_middle_json.py's add_bboxes call), so tuning the
+        # threshold does NOT cause redactions to render inline.
+        import os as _os
+        try:
+            threshold = float(_os.getenv("MINERU_REDACTION_OVERLAP_THRESHOLD", "0.7"))
+        except ValueError:
+            threshold = 0.7
+
         need_remove_list = []
         layout_dets = self.__page_model_info['layout_dets']
         redaction_blocks = [x for x in layout_dets if x['category_id'] == CategoryId.Redaction]
@@ -84,7 +98,7 @@ class MagicModel:
                 ratio = calculate_overlap_area_in_bbox1_area_ratio(
                     text_block['bbox'], redaction_block['bbox']
                 )
-                if ratio > 0.7 and text_block not in need_remove_list:
+                if ratio > threshold and text_block not in need_remove_list:
                     need_remove_list.append(text_block)
 
         for need_remove in need_remove_list:

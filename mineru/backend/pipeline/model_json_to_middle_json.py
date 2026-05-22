@@ -127,7 +127,22 @@ def page_model_info_to_page_info(page_model_info, image_dict, page, image_writer
         )
 
     if redaction_blocks:
-        add_bboxes(redaction_blocks, BlockType.REDACTION, all_bboxes)
+        # Only emit a redaction as a standalone block when it isn't substantially
+        # inside any surviving text/title block. Redactions sitting inside a
+        # surviving block stay as Redaction spans (CategoryId.Redaction is in
+        # __get_all_spans's span categories), which get filled into that block
+        # and render inline via merge_para_with_text — giving the classifier
+        # real sentence context.
+        surviving_host_bboxes = [b['bbox'] for b in text_blocks + title_blocks]
+        standalone_redactions = [
+            r for r in redaction_blocks
+            if not any(
+                calculate_overlap_area_in_bbox1_area_ratio(r['bbox'], hb) > 0.5
+                for hb in surviving_host_bboxes
+            )
+        ]
+        if standalone_redactions:
+            add_bboxes(standalone_redactions, BlockType.REDACTION, all_bboxes)
 
     """在删除重复span之前，应该通过image_body和table_body的block过滤一下image和table的span"""
     """顺便删除大水印并保留abandon的span"""

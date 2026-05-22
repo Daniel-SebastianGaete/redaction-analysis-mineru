@@ -177,6 +177,11 @@ def merge_para_with_text(para_block):
                                 para_text += content
                         else:  # 西方文本语境下 content间需要空格分隔
                             para_text += f'{content} '
+                    else:
+                        # Non-text/non-equation spans (e.g. REDACTION) — append
+                        # with a separator so they don't get silently dropped
+                        # in non-CJK contexts.
+                        para_text += f'{content} '
             else:
                 continue
 

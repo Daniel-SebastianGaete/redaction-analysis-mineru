@@ -59,7 +59,21 @@ def span_block_type_compatible(span_type, block_type):
     elif span_type == ContentType.TABLE:
         return block_type in [BlockType.TABLE_BODY]
     elif span_type == ContentType.REDACTION:
-        return block_type in [BlockType.REDACTION]
+        # Allow redaction spans to host inside TEXT/TITLE/CAPTION/etc. blocks
+        # too, so a redaction sitting inside a surviving paragraph renders as
+        # an inline ***** rather than getting dropped for lack of a compatible
+        # host. (model_json_to_middle_json filters redactions inside surviving
+        # text blocks out of the standalone-block set; this widens the span
+        # side of the contract to match.)
+        return block_type in [
+            BlockType.REDACTION,
+            BlockType.TEXT,
+            BlockType.TITLE,
+            BlockType.IMAGE_CAPTION,
+            BlockType.IMAGE_FOOTNOTE,
+            BlockType.TABLE_CAPTION,
+            BlockType.TABLE_FOOTNOTE,
+        ]
     else:
         return False
 

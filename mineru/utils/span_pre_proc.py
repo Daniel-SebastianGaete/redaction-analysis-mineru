@@ -66,6 +66,11 @@ def remove_overlaps_low_confidence_spans(spans):
                 # span1 或 span2 任何一个都不应该在 dropped_spans 中
                 if span1 in dropped_spans or span2 in dropped_spans:
                     continue
+                # Redaction spans are never deduped — the OCR'd text at the
+                # same location coexists by design (text gives context, the
+                # redaction marker carries the redaction).
+                if span1.get('type') == ContentType.REDACTION or span2.get('type') == ContentType.REDACTION:
+                    continue
                 else:
                     if calculate_iou(span1['bbox'], span2['bbox']) > 0.9:
                         if span1['score'] < span2['score']:
@@ -93,6 +98,11 @@ def remove_overlaps_min_spans(spans):
             if span1 != span2:
                 # span1 或 span2 任何一个都不应该在 dropped_spans 中
                 if span1 in dropped_spans or span2 in dropped_spans:
+                    continue
+                # Redaction spans are smaller than the text-line spans that
+                # contain them; without this guard they'd be dropped here,
+                # leaving the OCR'd line text intact with no redaction marker.
+                if span1.get('type') == ContentType.REDACTION or span2.get('type') == ContentType.REDACTION:
                     continue
                 else:
                     overlap_box = get_minbox_if_overlap_by_ratio(span1['bbox'], span2['bbox'], 0.65)
