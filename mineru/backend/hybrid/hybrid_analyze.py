@@ -394,17 +394,12 @@ def _run_redaction_detection(results, images_pil_list, hybrid_pipeline_model):
     redaction_model = None
     if hybrid_pipeline_model is not None and getattr(hybrid_pipeline_model, 'apply_redaction', False):
         redaction_model = hybrid_pipeline_model.redaction_model
-    else:
+    elif os.getenv('MINERU_REDACTION_FAMILY'):
         # vlm_ocr_enable=True case: hybrid_pipeline_model is None.
-        # Build the redaction model directly from the env var.
-        redaction_weights = os.getenv('MINERU_REDACTION_WEIGHTS')
-        if redaction_weights and os.path.isfile(redaction_weights):
-            device = get_device()
-            redaction_model = AtomModelSingleton().get_atom_model(
-                atom_model_name=AtomicModel.RedactionDetection,
-                redaction_weights=redaction_weights,
-                device=device,
-            )
+        # Build the redaction model directly from the env vars.
+        redaction_model = AtomModelSingleton().get_atom_model(
+            atom_model_name=AtomicModel.RedactionDetection,
+        )
 
     if redaction_model is None:
         return
