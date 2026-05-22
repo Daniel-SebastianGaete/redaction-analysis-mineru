@@ -178,9 +178,15 @@ class RedactionDetectionAdapter:
                 output_dir=str(output_dir),
             )
 
+            # Strip VIRTUAL_ENV so `uv run` inside redaction-detection's run.sh
+            # discovers the correct per-family .venv instead of inheriting
+            # MinerU's own venv path.
+            sub_env = os.environ.copy()
+            sub_env.pop("VIRTUAL_ENV", None)
+
             try:
                 completed = subprocess.run(
-                    cmd, check=False, capture_output=True, text=True
+                    cmd, env=sub_env, check=False, capture_output=True, text=True
                 )
             except FileNotFoundError as exc:
                 raise RuntimeError(
