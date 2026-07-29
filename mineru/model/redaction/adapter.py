@@ -15,6 +15,9 @@ Configuration via environment variables:
     MINERU_REDACTION_MODEL_TYPE     required for detectron: maskrcnn | mask2former
     MINERU_REDACTION_RTDETR_ROOT    required for rtdetr: path to the RT-DETRv2 vendor repo
     MINERU_REDACTION_CONF           optional: confidence threshold (default 0.5)
+    MINERU_REDACTION_CV_*           optional: classic-CV large-black-rectangle
+                                    detector, merged with the trained family's
+                                    output (see .cv_paragraph)
 
 Implementation: for each call to batch_predict, the adapter writes images
 to a temp directory, synthesizes a minimal COCO ground-truth JSON
@@ -40,6 +43,7 @@ import numpy as np
 from PIL import Image
 
 from mineru.utils.enum_class import CategoryId
+from mineru.model.redaction.cv_paragraph import CvParagraphDetector, merge_cv_rects
 
 SUPPORTED_FAMILIES = {"yolo", "mmdet", "detectron", "rtdetr", "rfdetr"}
 
@@ -61,6 +65,7 @@ class RedactionDetectionAdapter:
         model_type: Optional[str] = None,
         rtdetr_root: Optional[str] = None,
         conf: float = 0.5,
+        cv_detector: Optional[CvParagraphDetector] = None,
     ):
         if family not in SUPPORTED_FAMILIES:
             raise ValueError(
@@ -96,6 +101,7 @@ class RedactionDetectionAdapter:
         self.model_type = model_type
         self.rtdetr_root = str(Path(rtdetr_root).expanduser().resolve()) if rtdetr_root else None
         self.conf = conf
+        self.cv_detector = cv_detector
 
     @classmethod
     def from_env(cls) -> Optional["RedactionDetectionAdapter"]:
@@ -132,6 +138,7 @@ class RedactionDetectionAdapter:
             model_type=os.getenv("MINERU_REDACTION_MODEL_TYPE"),
             rtdetr_root=os.getenv("MINERU_REDACTION_RTDETR_ROOT"),
             conf=conf,
+            cv_detector=CvParagraphDetector.from_env(),
         )
 
     def predict(self, image: Union[np.ndarray, Image.Image]) -> List[Dict]:
@@ -153,8 +160,10 @@ class RedactionDetectionAdapter:
             output_dir.mkdir()
 
             gt_images = []
+            pils = []
             for idx, img in enumerate(images, start=1):
                 pil = self._to_pil(img)
+                pils.append(pil)
                 fname = f"page_{idx:05d}.png"
                 pil.save(image_dir / fname)
                 gt_images.append(
@@ -202,11 +211,11 @@ class RedactionDetectionAdapter:
                 )
 
             preds_path = output_dir / "coco_results.json"
-            if not preds_path.is_file():
-                return [[] for _ in images]
-
-            with open(preds_path) as f:
-                preds = json.load(f)
+            if preds_path.is_file():
+                with open(preds_path) as f:
+                    preds = json.load(f)
+            else:
+                preds = []
 
         per_image: List[List[Dict]] = [[] for _ in images]
         for det in preds:
@@ -229,6 +238,13 @@ class RedactionDetectionAdapter:
                     "redaction_subtype": int(det.get("category_id", 0)),
                 }
             )
+
+        if self.cv_detector is not None:
+            for idx, pil in enumerate(pils):
+                rects = self.cv_detector.detect(np.asarray(pil))
+                per_image[idx] = merge_cv_rects(
+                    per_image[idx], rects, category_id=CategoryId.Redaction
+                )
 
         return per_image
 
