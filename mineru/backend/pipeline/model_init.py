@@ -9,6 +9,7 @@ from ...model.mfd.yolo_v8 import YOLOv8MFDModel
 from ...model.mfr.unimernet.Unimernet import UnimernetModel
 from ...model.mfr.pp_formulanet_plus_m.predict_formula import FormulaRecognizer
 from mineru.model.ocr.pytorch_paddle import PytorchPaddleOCR
+from mineru.model.ocr.doctr_reco import DoctrTextRecognizer
 from ...model.redaction.adapter import RedactionDetectionAdapter
 from ...model.ori_cls.paddle_ori_cls import PaddleOrientationClsModel
 from ...model.table.cls.paddle_table_cls import PaddleTableClsModel
@@ -125,6 +126,14 @@ def ocr_model_init(det_db_box_thresh=0.3,
             det_db_unclip_ratio=det_db_unclip_ratio,
             enable_merge_det_boxes=enable_merge_det_boxes,
         )
+    # Env-gated custom recognizer (MINERU_OCR_RECO_*), swapped in only for
+    # the main-text OCR instances: those are the only ones constructed with
+    # enable_merge_det_boxes=True — auxiliary instances (table rec cells,
+    # orientation cls) pass False and keep the Paddle recognizer.
+    if enable_merge_det_boxes:
+        custom_reco = DoctrTextRecognizer.from_env()
+        if custom_reco is not None:
+            model.text_recognizer = custom_reco
     return model
 
 
