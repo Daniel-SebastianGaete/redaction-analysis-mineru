@@ -16,6 +16,7 @@ from mineru.utils.cut_image import cut_image_and_table
 from mineru.utils.enum_class import BlockType, ContentType
 from mineru.utils.llm_aided import llm_aided_title
 from mineru.utils.model_utils import clean_memory
+from mineru.utils.redaction_adopt import adopt_redactions_into_lines
 from mineru.backend.pipeline.pipeline_magic_model import MagicModel
 from mineru.utils.ocr_utils import OcrConfidence
 from mineru.utils.span_block_fix import fill_spans_in_blocks, fix_discarded_block, fix_block_spans
@@ -89,6 +90,19 @@ def page_model_info_to_page_info(page_model_info, image_dict, page, image_writer
             else:
                 img_body_blocks.append(block)
 
+
+    # Widen text/title blocks to take in the line-scale redactions sitting at
+    # their line ends (and in the gaps between their lines). The layout
+    # detector excludes the black bars from its text regions, so without this
+    # those redactions have no host block, become standalone REDACTION blocks,
+    # and reach the classifier as paragraph-scale. Must run before
+    # prepare_block_bboxes, which copies these bboxes into all_bboxes.
+    if redaction_blocks:
+        adopt_redactions_into_lines(
+            redaction_blocks,
+            text_blocks + title_blocks,
+            [s["bbox"] for s in spans if s.get("type") == ContentType.TEXT and s.get("bbox")],
+        )
 
     """将所有区块的bbox整理到一起"""
     if formula_enabled:
